@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OTP Verification</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Custom animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeOut {
+      from { opacity: 1; transform: translateY(0); }
+      to { opacity: 0; transform: translateY(-10px); }
+    }
+    .fade-in { animation: fadeIn 0.5s ease-in-out; }
+    .fade-out { animation: fadeOut 0.5s ease-in-out; }
+  </style>
+</head>
+<body class="bg-gradient-to-r from-purple-500 to-indigo-600 min-h-screen flex items-center justify-center">
+  <div class="bg-white p-8 rounded-lg shadow-2xl max-w-md w-full transform transition-all duration-500 hover:scale-105">
+    <!-- OTP Generation Form -->
+    <div id="otp-generation">
+      <h1 class="text-2xl font-bold text-gray-800 mb-6 text-center">Generate OTP</h1>
+      <form id="generate-otp-form" class="space-y-4">
+        <div>
+          <label for="email" class="block text-sm font-medium text-gray-700">Email Address</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            placeholder="Enter your email"
+            class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+            required
+          />
+          <p id="email-error" class="text-red-500 text-sm mt-1 hidden">Please enter a valid email address.</p>
+        </div>
+        <button
+          type="submit"
+          id="send-otp-btn"
+          class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-all duration-300 transform hover:scale-105 active:scale-95"
+        >
+          Send OTP
+        </button>
+      </form>
+      <div id="timer" class="text-center text-gray-600 mt-4 hidden">
+        Resend OTP in <span id="countdown">120</span> seconds
+      </div>
+    </div>
+
+    <!-- OTP Verification Form -->
+    <div id="otp-verification" class="hidden">
+      <h1 class="text-2xl font-bold text-gray-800 mb-6 text-center">Verify OTP</h1>
+      <form id="verify-otp-form" class="space-y-4">
+        <div>
+          <label for="otp" class="block text-sm font-medium text-gray-700">Enter OTP</label>
+          <input
+            type="text"
+            id="otp"
+            name="otp"
+            placeholder="Enter 6-digit OTP"
+            maxlength="6"
+            class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+            required
+          />
+          <p id="otp-error" class="text-red-500 text-sm mt-1 hidden">OTP must be 6 digits.</p>
+        </div>
+        <button
+          type="submit"
+          id="verify-otp-btn"
+          disabled
+          class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-all duration-300 transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Verify OTP
+        </button>
+      </form>
+    </div>
+
+    <!-- Server Response Message -->
+    <div id="server-message" class="mt-4 text-center hidden"></div>
+  </div>
+
+  <script>
+    const emailInput = document.getElementById('email');
+    const sendOtpBtn = document.getElementById('send-otp-btn');
+    const otpInput = document.getElementById('otp');
+    const verifyOtpBtn = document.getElementById('verify-otp-btn');
+    const serverMessage = document.getElementById('server-message');
+    const otpGeneration = document.getElementById('otp-generation');
+    const otpVerification = document.getElementById('otp-verification');
+    const timerDisplay = document.getElementById('timer');
+    const countdownElement = document.getElementById('countdown');
+    const emailError = document.getElementById('email-error');
+    const otpError = document.getElementById('otp-error');
+
+    let countdown = 120;
+    let countdownInterval;
+
+    // Validate email format
+    const validateEmail = (email) => {
+      const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return regex.test(email);
+    };
+
+    // Show server message with animation
+    const showMessage = (message, isSuccess) => {
+      serverMessage.textContent = message;
+      serverMessage.className = `mt-4 text-center ${isSuccess ? 'text-green-600' : 'text-red-600'} fade-in`;
+      serverMessage.classList.remove('hidden');
+      setTimeout(() => {
+        serverMessage.classList.add('fade-out');
+        setTimeout(() => serverMessage.classList.add('hidden'), 500);
+      }, 3000);
+    };
+
+    // Start countdown timer
+    const startCountdown = () => {
+      countdown = 120;
+      timerDisplay.classList.remove('hidden');
+      countdownInterval = setInterval(() => {
+        countdown--;
+        countdownElement.textContent = countdown;
+        if (countdown <= 0) {
+          clearInterval(countdownInterval);
+          timerDisplay.classList.add('hidden');
+        }
+      }, 1000);
+    };
+
+    // Handle OTP generation form submission
+    document.getElementById('generate-otp-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = emailInput.value.trim();
+
+      if (!validateEmail(email)) {
+        emailError.classList.remove('hidden');
+        return;
+      } else {
+        emailError.classList.add('hidden');
+      }
+
+      try {
+        const response = await fetch('/mail', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mail: email }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          showMessage(data.mess, true);
+          otpGeneration.classList.add('hidden');
+          otpVerification.classList.remove('hidden');
+          startCountdown();
+        } else {
+          const data = await response.json();
+          showMessage(data.mess, false);
+        }
+      } catch (error) {
+        showMessage('An error occurred. Please try again.', false);
+      }
+    });
+
+    // Enable verify OTP button only if OTP is 6 digits
+    otpInput.addEventListener('input', () => {
+      if (otpInput.value.length === 6) {
+        verifyOtpBtn.disabled = false;
+        otpError.classList.add('hidden');
+      } else {
+        verifyOtpBtn.disabled = true;
+        otpError.classList.remove('hidden');
+      }
+    });
+
+    // Handle OTP verification form submission
+    document.getElementById('verify-otp-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = emailInput.value.trim();
+      const otp = otpInput.value.trim();
+
+      try {
+        const response = await fetch('/mail/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mail: email, otp: otp }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          showMessage(data.mess, true);
+        } else {
+          const data = await response.json();
+          showMessage(data.mess, false);
+        }
+      } catch (error) {
+        showMessage('An error occurred. Please try again.', false);
+      }
+    });
+  </script>
+</body>
+</html>
