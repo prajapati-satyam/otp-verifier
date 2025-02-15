@@ -6,7 +6,9 @@ const send_mail = require('./routes/send_mail_router');
 const cors = require('cors')
 
 // index is gpt genrated whiel deepseek is genarted by deepseek
-app.use(cors());
+app.use(cors({
+  origin: "https://otp-verifier-ps50.onrender.com"
+}));
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.json());
 
