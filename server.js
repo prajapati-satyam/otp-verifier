@@ -5,17 +5,17 @@ const path = require('path');
 const send_mail = require('./routes/send_mail_router');
 const cors = require('cors')
 
-// index is deepseek genrated whiel index2 is genarted by gpt
+// index is gpt genrated whiel deepseek is genarted by deepseek
 app.use(cors());
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.json());
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index2.html'))  
+  res.sendFile(path.join(__dirname, 'public', 'index.html'))  
 }) 
 
-app.get('/gpt', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'))
+app.get('/deepseek', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'deepseek.html'))
 })
 
 app.use('/mail', send_mail)
